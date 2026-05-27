@@ -1,0 +1,5 @@
+numpy
+opencv-python
+PyMaxflow
+scikit-image
+matplotlib

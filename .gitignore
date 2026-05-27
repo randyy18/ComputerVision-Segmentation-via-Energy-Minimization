@@ -1,0 +1,31 @@
+# Node
+node_modules/
+dist/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment
+.env
+.env.local
+
+# Runtime storage
+demo/storage/uploads/*
+demo/storage/results/*
+demo/storage/sessions/*
+demo/storage/leaderboards/*
+
+# Keep empty folders
+!demo/storage/uploads/.gitkeep
+!demo/storage/results/.gitkeep
+!demo/storage/sessions/.gitkeep
+!demo/storage/leaderboards/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
