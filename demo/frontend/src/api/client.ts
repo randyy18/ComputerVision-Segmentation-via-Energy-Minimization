@@ -82,6 +82,25 @@ export interface DatasetListResponse {
 const DATASET_ID_KEY = 'grabcut_dataset_id'
 const DATASET_LABEL_KEY = 'grabcut_dataset_label'
 
+// Backend URL dari Vercel Environment Variable.
+// Contoh value di Vercel:
+// VITE_API_BASE_URL=https://randyy18-grabcut-backend.hf.space
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+
+function apiUrl(path: string): string {
+  // Kalau path sudah absolute URL, langsung return.
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+
+  // Kalau tidak ada API_BASE_URL, fallback ke relative path untuk local dev/proxy.
+  if (!API_BASE_URL) {
+    return path
+  }
+
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`
+}
+
 export function saveDatasetContext(datasetId: string, datasetLabel: string): void {
   localStorage.setItem(DATASET_ID_KEY, datasetId)
   localStorage.setItem(DATASET_LABEL_KEY, datasetLabel)
@@ -100,17 +119,21 @@ export function clearDatasetContext(): void {
 }
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init)
+  const res = await fetch(apiUrl(url), init)
+
   if (!res.ok) {
     let detail = res.statusText
+
     try {
       const body = await res.json()
       detail = body.detail ?? detail
     } catch {
       /* ignore */
     }
+
     throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail))
   }
+
   return res.json() as Promise<T>
 }
 
@@ -121,9 +144,19 @@ export async function createSession(
 ): Promise<SessionCreateResponse> {
   const form = new FormData()
   form.append('display_name', displayName)
-  for (const f of imageFiles) form.append('images', f)
-  for (const f of gtFiles) form.append('gt', f)
-  return request<SessionCreateResponse>('/api/sessions', { method: 'POST', body: form })
+
+  for (const f of imageFiles) {
+    form.append('images', f)
+  }
+
+  for (const f of gtFiles) {
+    form.append('gt', f)
+  }
+
+  return request<SessionCreateResponse>('/api/sessions', {
+    method: 'POST',
+    body: form,
+  })
 }
 
 export async function getSession(sessionId: string): Promise<SessionResponse> {
@@ -131,11 +164,11 @@ export async function getSession(sessionId: string): Promise<SessionResponse> {
 }
 
 export function imageUrl(sessionId: string, index: number): string {
-  return `/api/sessions/${sessionId}/images/${index}`
+  return apiUrl(`/api/sessions/${sessionId}/images/${index}`)
 }
 
 export async function setBbox(sessionId: string, index: number, bbox: Bbox): Promise<void> {
-  await request(`/api/sessions/${sessionId}/bboxes/${index}`, {
+  await request<void>(`/api/sessions/${sessionId}/bboxes/${index}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(bbox),
@@ -143,27 +176,40 @@ export async function setBbox(sessionId: string, index: number, bbox: Bbox): Pro
 }
 
 export async function finishSession(sessionId: string): Promise<void> {
-  await request(`/api/sessions/${sessionId}/finish`, { method: 'POST' })
+  await request<void>(`/api/sessions/${sessionId}/finish`, {
+    method: 'POST',
+  })
 }
 
 export async function getResults(sessionId: string): Promise<ResultsResponse> {
-  return request<ResultsResponse>(`/api/sessions/${sessionId}/results`)
+  const data = await request<ResultsResponse>(`/api/sessions/${sessionId}/results`)
+
+  return {
+    ...data,
+    images: data.images.map((img) => ({
+      ...img,
+      mask_url: img.mask_url ? apiUrl(img.mask_url) : '',
+      overlay_url: img.overlay_url ? apiUrl(img.overlay_url) : '',
+    })),
+  }
 }
 
 export async function retrySession(sessionId: string): Promise<{ time_limit_sec: number }> {
-  return request(`/api/sessions/${sessionId}/retry`, { method: 'POST' })
+  return request<{ time_limit_sec: number }>(`/api/sessions/${sessionId}/retry`, {
+    method: 'POST',
+  })
 }
 
 export function downloadMasksUrl(sessionId: string): string {
-  return `/api/sessions/${sessionId}/download`
+  return apiUrl(`/api/sessions/${sessionId}/download`)
 }
 
 export async function listDatasets(): Promise<DatasetListResponse> {
-  return request('/api/leaderboard/datasets')
+  return request<DatasetListResponse>('/api/leaderboard/datasets')
 }
 
 export async function getLeaderboard(datasetId: string): Promise<LeaderboardResponse> {
-  return request(`/api/leaderboard?dataset_id=${encodeURIComponent(datasetId)}`)
+  return request<LeaderboardResponse>(`/api/leaderboard?dataset_id=${encodeURIComponent(datasetId)}`)
 }
 
 export async function submitLeaderboard(
@@ -173,6 +219,9 @@ export async function submitLeaderboard(
   return request<LeaderboardEntry>('/api/leaderboard', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ session_id: sessionId, display_name: displayName }),
+    body: JSON.stringify({
+      session_id: sessionId,
+      display_name: displayName,
+    }),
   })
 }
