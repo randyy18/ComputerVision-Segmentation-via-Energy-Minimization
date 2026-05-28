@@ -13,6 +13,14 @@ from typing import Literal
 import cv2
 import numpy as np
 
+from math import ceil
+
+SECONDS_PER_IMAGE = 1.5
+
+
+def game_time_limit(image_count: int) -> int:
+    return ceil(image_count * SECONDS_PER_IMAGE)
+
 from app.models.schemas import (
     AggregateMetrics,
     DatasetSummary,
@@ -194,7 +202,7 @@ class SessionStore:
             session_id=session.session_id,
             display_name=session.display_name,
             image_count=len(session.images),
-            time_limit_sec=len(session.images),
+            time_limit_sec=game_time_limit(len(session.images)),
             phase=session.phase,
             images=[
                 ImageInfo(

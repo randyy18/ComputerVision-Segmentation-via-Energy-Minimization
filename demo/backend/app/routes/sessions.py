@@ -1,7 +1,7 @@
 """Session upload, game, segmentation, and download routes."""
 
 from __future__ import annotations
-
+from math import ceil
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 
@@ -18,6 +18,11 @@ from app.services.upload_parser import parse_upload_pairs
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
+SECONDS_PER_IMAGE = 1.5
+
+
+def game_time_limit(image_count: int) -> int:
+    return ceil(image_count * SECONDS_PER_IMAGE)
 
 async def _read_uploads(files: list[UploadFile]) -> list[tuple[str, bytes]]:
     out: list[tuple[str, bytes]] = []
@@ -51,7 +56,7 @@ async def create_session(
         session_id=session.session_id,
         display_name=session.display_name,
         image_count=len(session.images),
-        time_limit_sec=len(session.images),
+        time_limit_sec=game_time_limit(len(session.images)),
         stems=[img.stem for img in session.images],
         dataset_id=session.dataset_id,
         dataset_label=session.dataset_label,
@@ -161,6 +166,6 @@ def retry_session(session_id: str) -> RetryResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return RetryResponse(
         session_id=session.session_id,
-        time_limit_sec=len(session.images),
+        time_limit_sec=game_time_limit(len(session.images)),
         phase="game",
     )

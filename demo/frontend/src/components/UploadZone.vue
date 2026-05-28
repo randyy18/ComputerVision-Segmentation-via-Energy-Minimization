@@ -37,6 +37,12 @@ const matchedCount = computed(() => {
   return n
 })
 
+const SECONDS_PER_IMAGE = 1.5
+
+const estimatedTimeLimit = computed(() =>
+  Math.ceil(matchedCount.value * SECONDS_PER_IMAGE),
+)
+
 const canStart = computed(
   () =>
     !props.disabled &&
@@ -146,7 +152,7 @@ function start() {
     <p v-if="localError" class="error-banner">{{ localError }}</p>
 
     <button class="btn-primary start-btn" type="button" :disabled="!canStart" @click="start">
-      Start game — {{ matchedCount }}s on the clock
+      Start game — {{ estimatedTimeLimit }}s on the clock
     </button>
   </div>
 </template>

@@ -21,7 +21,7 @@ const pct = computed(() =>
       <span class="timer-value">{{ remaining }}</span>
       <span class="timer-unit">sec</span>
     </div>
-    <p class="timer-caption">{{ total }} images — {{ total }} seconds</p>
+    <p class="timer-caption">{{ total }} seconds on the clock</p>
     <div class="progress-bar">
       <div class="progress-bar-fill" :style="{ width: `${pct}%` }" />
     </div>
